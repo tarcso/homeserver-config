@@ -1,0 +1,185 @@
+services:
+
+  n8n:
+    image: n8nio/n8n
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    volumes:
+      - /mnt/docker-data/n8n:/home/node/.n8n
+    environment:
+      - N8N_HOST=0.0.0.0
+      - WEBHOOK_URL=http://${HOST}:5678/
+      - GENERIC_TIMEZONE=Europe/Budapest
+      - N8N_SECURE_COOKIE=false
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_VERSION_NOTIFICATIONS_ENABLED=false
+
+  filebrowser:
+    image: filebrowser/filebrowser
+    container_name: filebrowser
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./filebrowser:/database
+      - /mnt/storage:/srv
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:2
+    container_name: uptime-kuma
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - /mnt/docker-data/uptime-kuma:/app/data
+
+  watchtower:
+      image: containrrr/watchtower:latest
+      container_name: watchtower
+      restart: unless-stopped
+      ports:
+        - "8085:8080"  # Map host port 8081 to container port 8080
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+      environment:
+        - WATCHTOWER_CLEANUP=true
+        - WATCHTOWER_SCHEDULE=0 0 4 * * *
+        - WATCHTOWER_NOTIFICATIONS=shoutrrr
+        - WATCHTOWER_NOTIFICATION_URL=telegram://${WATCHTOWER_BOT_TOKEN}@telegram?channels=${WATCHTOWER_CHAT_ID}
+        - WATCHTOWER_HTTP_API_UPDATE=true
+        - WATCHTOWER_HTTP_API_TOKEN=${WATCHTOWER_HTTP_API_TOKEN}
+        - WATCHTOWER_HTTP_API_PERIODIC_POLLS=true
+        - WATCHTOWER_HTTP_API_METRICS=true
+      command: --api-version 1.52
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    network_mode: host
+    volumes:
+      - ./homepage:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /mnt/storage:/mnt/storage:ro
+    restart: unless-stopped
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: ${HOST}:3000
+      HOMEPAGE_VAR_WATCHTOWER_KEY: ${HOMEPAGE_VAR_WATCHTOWER_KEY}
+      HOMEPAGE_VAR_FILE_BROWSER_USERNAME: ${HOMEPAGE_VAR_FILE_BROWSER_USERNAME}
+      HOMEPAGE_VAR_FILE_BROWSER_PASSWORD: ${HOMEPAGE_VAR_FILE_BROWSER_PASSWORD}
+      HOMEPAGE_VAR_PAPERLESS_NGX_USERNAME: ${HOMEPAGE_VAR_PAPERLESS_NGX_USERNAME}
+      HOMEPAGE_VAR_PAPERLESS_NGX_PASSWORD: ${HOMEPAGE_VAR_PAPERLESS_NGX_PASSWORD}
+      HOMEPAGE_VAR_RASPBERRY_PI_5_SPEEDTEST_TRACKER_KEY: ${HOMEPAGE_VAR_RASPBERRY_PI_5_SPEEDTEST_TRACKER_KEY}
+      HOMEPAGE_VAR_ZEUS_SPEEDTEST_TRACKER_KEY: ${HOMEPAGE_VAR_ZEUS_SPEEDTEST_TRACKER_KEY}
+
+  speedtest-tracker:
+    image: lscr.io/linuxserver/speedtest-tracker:latest
+    container_name: speedtest-tracker
+    restart: unless-stopped
+    ports:
+      - "8765:80"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Copenhagen
+      - DB_CONNECTION=sqlite
+      - APP_KEY=${SPEEDTEST_TRACKER_APP_KEY}
+      - APP_URL=http://${HOST}:8765
+    volumes:
+      - ./speedtest-tracker:/config
+
+  paperless-broker:
+    image: docker.io/library/redis:7
+    container_name: paperless-broker
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+
+  paperless-db:
+    image: docker.io/library/postgres:15
+    container_name: paperless-db
+    restart: unless-stopped
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+  paperless-webserver:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: paperless-webserver
+    restart: unless-stopped
+    depends_on:
+      - paperless-db
+      - paperless-broker
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./paperless/data:/usr/src/paperless/data
+      - ./paperless/media:/usr/src/paperless/media
+      - ./paperless/export:/usr/src/paperless/export
+      - ./paperless/consume:/usr/src/paperless/consume
+    environment:
+      PAPERLESS_REDIS: redis://paperless-broker:6379
+      PAPERLESS_DBHOST: ${PAPERLESS_DB_HOST}
+      PAPERLESS_DBNAME: ${PAPERLESS_DB_NAME}
+      PAPERLESS_DBUSER: ${PAPERLESS_DB_USER}
+      PAPERLESS_DBPASS: ${PAPERLESS_DB_PASSWORD}
+      PAPERLESS_TIME_ZONE: Europe/Copenhagen
+      PAPERLESS_OCR_LANGUAGE: dan+eng+hun
+      PAPERLESS_OCR_LANGUAGES: dan hun
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY}
+      PAPERLESS_URL: http://localhost:8000
+        #Optional: Enable these for initial admin account
+      PAPERLESS_ADMIN_USER: ${PAPERLESS_ADMIN_USER}
+      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD}
+      PAPERLESS_ADMIN_MAIL: ${PAPERLESS_ADMIN_MAIL}
+
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    container_name: audiobookshelf
+    restart: unless-stopped
+    ports:
+      - "13378:80"
+    volumes:
+      - /mnt/storage/audiobooks:/audiobooks
+      - /mnt/storage/podcasts:/podcasts
+      - ./audiobookshelf/config:/config
+      - ./audiobookshelf/metadata:/metadata
+    environment:
+      - TZ=Europe/Budapest
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+      - "6881:6881"
+      - "6881:6881/udp"
+    volumes:
+      - ./qbittorrent/config:/config
+      - /mnt/storage/audiobooks:/audiobooks
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Budapest
+      - WEBUI_PORT=8090
+
+volumes:
+  portainer_data:
+  data:
+  media:
+  pgdata:
+  redisdata:

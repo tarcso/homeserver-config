@@ -1,0 +1,22 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/info-widgets/
+
+- resources:
+    cpu: true
+    memory: true
+    disk: /mnt/storage
+
+#- search:
+#    provider: duckduckgo
+#    target: _blank
+
+- openmeteo:
+    label: Copenhagen
+    latitude: 55.6761
+    longitude: 12.5683
+    timezone: Europe/Copenhagen
+    units: metric
+    cache: 5
+    format:
+      maximumFractionDigits: 1

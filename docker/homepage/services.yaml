@@ -1,0 +1,93 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/services/
+
+- Monitoring:
+    - Raspberry Pi 5 Uptime:
+        icon: uptime-kuma.png
+        href: http://raspberrypi:3001/
+        widget:
+            type: uptimekuma
+            url: http://raspberrypi:3001  # Docker bridge network
+            slug: homepage
+
+    - Zeus Uptime:
+        icon: uptime-kuma.png
+        href: http://zeus:3001
+        widget:
+          type: uptimekuma
+          url: http://zeus:3001
+          slug: homepage
+
+    - Portainer:
+        icon: portainer-alt.png
+        href: http://zeus:9000/
+
+    - Raspberry Pi 5 Portainer:
+        icon: portainer-alt.png
+        href: http://raspberrypi:9000/
+
+    - Watchtower:
+        icon: watchtower.png
+        widget:
+            type: watchtower
+            url: http://zeus:8085
+            key: {{HOMEPAGE_VAR_WATCHTOWER_KEY}}
+
+- Other services:
+    - File Browser:
+        icon: filebrowser.png
+        href: http://zeus:8080
+        widget:
+            type: filebrowser
+            url: http://zeus:8080/
+            username: {{HOMEPAGE_VAR_FILE_BROWSER_USERNAME}}
+            password: {{HOMEPAGE_VAR_FILE_BROWSER_PASSWORD}}
+
+    - Paperless-ngx:
+        icon: paperless-ng.png
+        href: http://zeus:8000/
+        widget:
+            type: paperlessngx
+            url: http://zeus:8000/
+            username: {{HOMEPAGE_VAR_PAPERLESS_NGX_USERNAME}}
+            password: {{HOMEPAGE_VAR_PAPERLESS_NGX_PASSWORD}}
+
+    - Pihole:
+        icon: pi-hole.png
+        href: http://pi.hole/admin/
+
+    - Speedtest Raspberry Pi 5:
+        icon: speedtest-tracker.png
+        href: http://raspberrypi:8765/
+        widget:
+            type: speedtest
+            url: http://raspberrypi:8765
+            version: 1
+            key: {{HOMEPAGE_WAR_RASPBERRY_PI_5_SPEEDTEST_TRACKER_KEY}}
+            bitratePrecision: 3
+
+    - Speedtest Zeus:
+        icon: speedtest-tracker.png
+        href: http://zeus:8765/
+        widget:
+            type: speedtest
+            url: http://zeus:8765
+            version: 1
+            key: {{HOMEPAGE_WAR_ZEUS_SPEEDTEST_TRACKER_KEY}}
+            bitratePrecision: 3
+
+    - OWASP Juice Shop:
+        href: http://raspberrypi:3000
+
+    - n8n:
+        icon: n8n.png
+        href: http://zeus:5678/
+
+    - qBittorrent:
+        icon: qbittorrent.png
+        href: http://zeus:8090/
+          
+    - Audiobookshelf:
+        icon: audiobookshelf.png
+        href: http://zeus:13378/
